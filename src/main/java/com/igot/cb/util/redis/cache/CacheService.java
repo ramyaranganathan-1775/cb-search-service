@@ -1,6 +1,7 @@
 package com.igot.cb.util.redis.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.igot.cb.util.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,5 +49,16 @@ public class CacheService {
       log.warn("Field not found in key {}.", key);
     }
     return null;
+  }
+
+  public boolean isRedisHealthy() {
+    try {
+      String pong = redisTemplate.getConnectionFactory()
+              .getConnection()
+              .ping();
+      return "PONG".equalsIgnoreCase(pong);
+    } catch (Exception e) {
+      return false;
+    }
   }
 }

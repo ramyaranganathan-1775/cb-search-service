@@ -1,12 +1,16 @@
 package com.igot.cb.util.redis.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.igot.cb.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -34,8 +38,18 @@ class CacheServiceTest {
     @Mock
     private ValueOperations<String, String> valueOperations;
 
+    @Mock
+    private RedisConnectionFactory connectionFactory;
+
+    @Mock
+    private RedisConnection redisConnection;
+
+
+
+
     @BeforeEach
-    void setUp() {
+    void setUp(){
+        MockitoAnnotations.openMocks(this);
         ReflectionTestUtils.setField(cacheService, "cacheTtl", 3600L);
     }
 
@@ -140,4 +154,40 @@ class CacheServiceTest {
         assertFalse(testResult);
         verify(redisTemplate).delete(key);
     }
+
+
+    @Test
+    void testRedisHealthy() {
+
+        when(redisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
+        when(connectionFactory.getConnection()).thenReturn(redisConnection);
+        when(redisConnection.ping()).thenReturn("PONG");
+
+        boolean result = cacheService.isRedisHealthy();
+
+        assertTrue(result);
+    }
+
+    @Test
+    void testRedisUnhealthyWhenPingNotPong() {
+
+        when(redisTemplate.getConnectionFactory()).thenReturn(connectionFactory);
+        when(connectionFactory.getConnection()).thenReturn(redisConnection);
+        when(redisConnection.ping()).thenReturn("FAIL");
+
+        boolean result = cacheService.isRedisHealthy();
+
+        assertFalse(result);
+    }
+
+    @Test
+    void testRedisException() {
+
+        when(redisTemplate.getConnectionFactory()).thenThrow(new RuntimeException("Redis error"));
+
+        boolean result = cacheService.isRedisHealthy();
+
+        assertFalse(result);
+    }
+
 }
