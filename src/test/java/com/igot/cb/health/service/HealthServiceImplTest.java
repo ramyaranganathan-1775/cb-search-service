@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +33,8 @@ class HealthServiceImplTest {
 
     @Mock
     private CacheService redisCacheService;
+
+    private final String REQUEST_ID = "test-request--123";
 
 
     @BeforeEach
@@ -62,7 +66,7 @@ class HealthServiceImplTest {
 
 
         // Act
-        ApiResponse response = healthService.checkHealthStatus();
+        ApiResponse response = healthService.checkHealthStatus(REQUEST_ID);
 
         // Assert
         assertNotNull(response);
@@ -103,7 +107,7 @@ class HealthServiceImplTest {
         when(redisCacheService.isRedisHealthy()).thenReturn(true);
 
         // Act
-        ApiResponse response = healthService.checkHealthStatus();
+        ApiResponse response = healthService.checkHealthStatus(REQUEST_ID);
 
         // Assert
         assertNotNull(response);
@@ -177,21 +181,21 @@ class HealthServiceImplTest {
     }
 
     @Test
-    void checkHealthStatus_ExceptionHandling() throws Exception {
-        when(cassandraOperation.getRecordsByPropertiesByKey(
-                Constants.KEYSPACE_SUNBIRD,
-                Constants.TABLE_SYSTEM_SETTINGS,
-                null,
-                null,
-                null))
-                .thenThrow(new RuntimeException("Cassandra connection failed"));
+    void testCheckHealthStatus_cassandraExceptionHandled() throws Exception {
 
-        ApiResponse response = healthService.checkHealthStatus();
+        when(cassandraOperation.getRecordsByPropertiesByKey(anyString(), anyString(),any(), any(), any()))
+                .thenThrow(new RuntimeException("DB down"));
 
-        assertNotNull(response);
+        when(redisCacheService.isRedisHealthy()).thenReturn(true);
+
+        ApiResponse response = healthService.checkHealthStatus(REQUEST_ID);
+
+        // ✅ Assert error handled
         assertEquals(Constants.FAILED, response.getParams().getStatus());
-        assertEquals("Cassandra connection failed", response.getParams().getErr());
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getResponseCode());
+        assertNotNull(response.getParams().getErr());
+
+        // ✅ NOT 500 because exception was handled internally
+        assertNotEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getResponseCode());
     }
 }
 

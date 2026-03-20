@@ -25,19 +25,22 @@ class HealthControllerTest {
 
     @Test
     void healthCheck_ShouldReturnApiResponse() throws Exception {
-
         ApiResponse response = new ApiResponse();
         response.setResponseCode(HttpStatus.OK);
 
-        when(healthService.checkHealthStatus()).thenReturn(response);
+        when(healthService.checkHealthStatus(anyString()))
+                .thenReturn(response);
 
+        // Act
         ResponseEntity<ApiResponse> result = healthController.healthCheck();
 
+        // Assert
+        assertNotNull(response);
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertEquals(response, result.getBody());
 
-        verify(healthService, times(1)).checkHealthStatus();
+        // Verify UUID was passed
+        verify(healthService).checkHealthStatus(anyString());
     }
-
 
 }

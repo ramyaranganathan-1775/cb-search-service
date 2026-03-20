@@ -1,6 +1,7 @@
 package com.igot.cb.health.service;
 
 import com.igot.cb.transactional.cassandrautils.CassandraOperation;
+import com.igot.cb.util.ApiRespParam;
 import com.igot.cb.util.ApiResponse;
 import com.igot.cb.util.Constants;
 import com.igot.cb.util.ProjectUtil;
@@ -29,8 +30,10 @@ public class HealthServiceImpl implements HealthService {
     private Logger log = LoggerFactory.getLogger(getClass().getName());
 
     @Override
-    public ApiResponse checkHealthStatus() throws Exception {
+    public ApiResponse checkHealthStatus(String requestId) throws Exception {
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_HEALTH_CHECK);
+        response.getParams().setMsgId(requestId);
+        response.getParams().setResMsgId(requestId);
         try {
             response.put(Constants.HEALTHY, true);
             List<Map<String, Object>> healthResults = new ArrayList<>();
@@ -39,6 +42,7 @@ public class HealthServiceImpl implements HealthService {
             redisHealthStatus(response);
         } catch (Exception e) {
             log.error("Failed to process health check. Exception: ", e);
+            response.put(Constants.HEALTHY, false);
             response.getParams().setStatus(Constants.FAILED);
             response.getParams().setErr(e.getMessage());
             response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -50,30 +54,55 @@ public class HealthServiceImpl implements HealthService {
         Map<String, Object> result = new HashMap<>();
         result.put(Constants.NAME, Constants.CASSANDRA_DB);
         Boolean res = true;
-        List<Map<String, Object>> cassandraQueryResponse = cassandraOperation.getRecordsByPropertiesByKey(
-                Constants.KEYSPACE_SUNBIRD, Constants.TABLE_SYSTEM_SETTINGS, null, null,null);
-        if (cassandraQueryResponse.isEmpty()) {
+
+        try {
+            List<Map<String, Object>> cassandraQueryResponse = cassandraOperation.getRecordsByPropertiesByKey(
+                    Constants.KEYSPACE_SUNBIRD, Constants.TABLE_SYSTEM_SETTINGS, null,null,null);
+            if (cassandraQueryResponse.isEmpty()) {
+                res = false;
+                setErrorDetails(response, new Exception("Cassandra is unhealthy"));
+            }
+        } catch (Exception e) {
             res = false;
-            response.put(Constants.HEALTHY, res);
+            setErrorDetails(response, e);
         }
+        response.put(Constants.HEALTHY, res);
         result.put(Constants.HEALTHY, res);
         ((List<Map<String, Object>>) response.get(Constants.CHECKS)).add(result);
     }
 
     private void redisHealthStatus(ApiResponse response) {
 
-            Map<String, Object> result = new HashMap<>();
-            result.put(Constants.NAME, Constants.REDIS_CACHE);
+        Map<String, Object> result = new HashMap<>();
+        result.put(Constants.NAME, Constants.REDIS_CACHE);
 
-            boolean isHealthy = redisCacheService.isRedisHealthy();
+        boolean isHealthy = true;
 
-            result.put(Constants.HEALTHY, isHealthy);
-
-            ((List<Map<String, Object>>) response.get(Constants.CHECKS)).add(result);
+        try{
+            isHealthy = redisCacheService.isRedisHealthy();
 
             if (!isHealthy) {
-                response.put(Constants.HEALTHY, false);
+                setErrorDetails(response, new Exception("Redis is unhealthy"));
             }
+        }catch (Exception e) {
+            isHealthy = false;
+            setErrorDetails(response, e);
+        }
+
+        response.put(Constants.HEALTHY, isHealthy);
+        result.put(Constants.HEALTHY, isHealthy);
+        ((List<Map<String, Object>>) response.get(Constants.CHECKS)).add(result);
+
+    }
+
+
+    private void setErrorDetails(ApiResponse response, Exception e) {
+
+        ApiRespParam params = response.getParams();
+        params.setStatus(Constants.FAILED);
+        params.setErr(e.getMessage());
+        params.setErrMsg(e.getLocalizedMessage());
+        response.setParams(params);
     }
 
 

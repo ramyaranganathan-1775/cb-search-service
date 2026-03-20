@@ -90,13 +90,13 @@ public class Constants {
     public static final String API_HEALTH_CHECK = "api.health.check";
     public static final String HEALTHY = "healthy";
     public static final String CHECKS = "checks";
-    public static final String CASSANDRA_DB = "cassandra db";
+    public static final String CASSANDRA_DB = "Cassandra Service";
     public static final String TABLE_SYSTEM_SETTINGS = "system_settings";
     public static final String KEYSPACE_SUNBIRD = "sunbird";
 
 
     // Redis
-    public static final String REDIS_CACHE = "redis cache";
+    public static final String REDIS_CACHE = "Redis cache";
     public static final String REDIS_PONG_RESPONSE = "PONG";
 
 
