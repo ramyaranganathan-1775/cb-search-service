@@ -93,11 +93,13 @@ public class Constants {
     public static final String CASSANDRA_DB = "Cassandra Service";
     public static final String TABLE_SYSTEM_SETTINGS = "system_settings";
     public static final String KEYSPACE_SUNBIRD = "sunbird";
-
+    public static final String ALL_HEALTH_CHECK = "Complete health check api";
+    public static final Boolean FALSE = false;
+    public static final Boolean TRUE = true;
+    public static final String ERR = "err";
 
     // Redis
     public static final String REDIS_CACHE = "Redis cache";
-    public static final String REDIS_PONG_RESPONSE = "PONG";
 
 
     private Constants() {
